@@ -42,15 +42,28 @@ def missing_values_table(df):
 
 def createData1():
     #read in the data
-    df = pd.read_csv('METABRIC_RNA_Mutation.csv', nrows=300, verbose=True, usecols=range(1,31))
+    df = pd.read_csv('FinalProject/data/METABRIC_RNA_Mutation.csv', nrows=3000, verbose=True, usecols=range(1,31))
+    df = df.drop(columns=["tumor_stage", "cancer_type", "primary_tumor_laterality", "3-gene_classifier_subtype", "overall_survival"])
+    df = df[df['death_from_cancer'] != "Living"]
+    df.replace(r'^\s*$', np.nan, regex=True)
+    # index =[idx for idx, row in df.iterrows() if len(row['Sample name'].split(" ")) > 1]
+    # df.drop(index, inplace=True)
+    df = df.dropna()
+    # df = df.assign(ID = lambda x: stripID(x['Sample name']))
+    # df["ID"] = pd.to_numeric(df["ID"])
+    # df = df.drop(columns=["Sample name", "ID"])
+    # df['Biopsy'] = df['BI-RADS'].apply(lambda x: 'No' if x in ['1', '2', '3'] else 'Yes')
+    return(df)
 
 #print the shape of the dataframe
+
+df = createData1()
 print(f"The shape is {df.shape}")
 
 #get the column info
 print(df.info())
 print(df.isna().sum())
-df = df.dropna()
+# df = df.dropna()
 display(missing_values_table(df))
 print(f"The shape is {df.shape}")
 
@@ -58,9 +71,36 @@ print(f"The shape is {df.shape}")
 # https://github.com/pycaret/pycaret/issues/1107
 
 from pycaret.classification import *
-clf1 = setup(df, target = 'overall_survival', imputation_type='iterative', session_id=123, log_experiment=True, experiment_name='exp1',fix_imbalance=True,
- ignore_features=["BI-RADS", 'Histology'], html=False, silent=True))
+clf1 = setup(df, target = 'death_from_cancer', imputation_type='iterative', session_id=123, log_experiment=False, experiment_name='exp1',fix_imbalance=True,
+ ignore_features=["overall_survival_months"], html=False, silent=True,
+ feature_selection=False, feature_selection_threshold=0.6,
+ pca=False, pca_components=None,
+ remove_multicollinearity=False, multicollinearity_threshold=0.9)
 
-best_model = compare_models()
+# from pycaret.regression import *
+# clf1 = setup(df, target = 'overall_survival_months', imputation_type='iterative', session_id=123, log_experiment=False, experiment_name='exp1',
+#  ignore_features=["death_from_cancer"], html=False, silent=False)
 
-display(best_model)
+# best_model = compare_models()
+# best_model = compare_models(include=['rf', 'lr', 'ridge'])
+# display(best_model)
+
+model_name = 'rf'
+# best_model = compare_models(include=[model_name])
+
+
+
+def model_plots(model_name, plots):
+    model = create_model(model_name)
+    interpret_model(model)
+    # evaluate_model(model)
+    for plot in plots:
+        plot_model(model, plot=plot)
+
+model_plots(model_name, ['auc', 'confusion_matrix', 'feature'])
+
+# print(f"The shape is {df.shape}")
+
+
+
+
